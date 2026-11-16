@@ -1,0 +1,53 @@
+{
+  "name": "grid-archive",
+  "version": "1.0.0",
+  "private": true,
+  "description": "GRID ARCHIVE: an unofficial, AI-powered archive of Formula 1 history, 1950 to today.",
+  "scripts": {
+    "dev": "next dev",
+    "build": "prisma generate && next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit",
+    "test": "tsx --test tests/*.test.ts",
+    "db:migrate": "prisma migrate deploy",
+    "db:generate": "prisma generate",
+    "data:fetch": "tsx scripts/fetch-jolpica.ts",
+    "data:wiki": "tsx scripts/fetch-wikipedia.ts",
+    "data:chassis": "tsx scripts/import-chassis.ts",
+    "images:ingest": "tsx scripts/ingest-images.ts",
+    "images:repair": "tsx scripts/repair-images.ts",
+    "ai:articles": "tsx scripts/generate-articles.ts",
+    "ai:embed": "tsx scripts/build-embeddings.ts",
+    "seed": "tsx scripts/seed.ts",
+    "update:current": "tsx scripts/update-current-season.ts",
+    "dev:db": "tsx scripts/dev-db.ts"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "1.6.0",
+    "@prisma/client": "6.19.3",
+    "clsx": "2.1.1",
+    "leaflet": "1.9.4",
+    "next": "15.5.29",
+    "react": "19.1.10",
+    "react-dom": "19.1.10",
+    "react-leaflet": "5.0.0",
+    "recharts": "2.15.4"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "0.5.15",
+    "@electric-sql/pglite-pgvector": "0.0.16",
+    "@electric-sql/pglite-socket": "0.2.18",
+    "@types/leaflet": "1.9.22",
+    "@types/node": "22.15.30",
+    "@types/react": "19.1.17",
+    "@types/react-dom": "19.1.9",
+    "autoprefixer": "10.4.21",
+    "cheerio": "1.1.2",
+    "postcss": "8.5.6",
+    "prisma": "6.19.3",
+    "sharp": "0.34.5",
+    "tailwindcss": "3.4.19",
+    "tsx": "4.23.15",
+    "typescript": "5.9.3"
+  }
+}

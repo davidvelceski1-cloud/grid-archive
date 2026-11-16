@@ -1,0 +1,17 @@
+node_modules/
+.next/
+.env
+.env.local
+*.log
+/data/cache/
+/.devdb/
+next-env.d.ts
+*.tsbuildinfo
+/tmp/
+.vercel
+.env*.local
+.env.production
+
+.vercel
+.env*
+!.env.example

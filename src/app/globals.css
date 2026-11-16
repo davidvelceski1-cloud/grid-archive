@@ -1,0 +1,262 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: #000000;
+  --surface: #0b0d10;
+  --accent: #e4002b;
+  color-scheme: dark;
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    scroll-behavior: smooth;
+  }
+  body {
+    @apply bg-ink font-sans text-white antialiased;
+    font-feature-settings: "ss01", "cv11";
+  }
+  ::selection {
+    background: var(--accent);
+    color: #fff;
+  }
+  :focus-visible {
+    outline: 2px solid #ff5a72;
+    outline-offset: 2px;
+  }
+  .light :focus-visible {
+    outline-color: #b80020;
+  }
+  h1, h2, h3, h4 {
+    @apply font-display;
+    text-wrap: balance;
+  }
+  table {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@layer components {
+  .shell {
+    @apply mx-auto w-full max-w-grid px-4 sm:px-6 lg:px-10;
+  }
+  .grid-12 {
+    @apply grid grid-cols-4 gap-x-4 sm:grid-cols-8 sm:gap-x-6 lg:grid-cols-12 lg:gap-x-8;
+  }
+  .eyebrow {
+    @apply text-[0.72rem] font-bold uppercase tracking-[0.2em] text-mist;
+  }
+  .light .eyebrow {
+    @apply text-steel;
+  }
+  .eyebrow-accent {
+    @apply text-[0.72rem] font-bold uppercase tracking-[0.2em] text-signal-bright;
+  }
+  .light .eyebrow-accent {
+    @apply text-signal-deep;
+  }
+  .link {
+    @apply text-signal-bright underline decoration-1 underline-offset-[3px] transition-colors hover:text-white;
+  }
+  .light .link {
+    @apply text-signal-deep hover:text-ink;
+  }
+  .link-quiet {
+    @apply underline-offset-[3px] hover:text-signal-bright hover:underline;
+  }
+  .light .link-quiet {
+    @apply hover:text-signal-deep;
+  }
+  .btn {
+    @apply inline-flex items-center gap-2 bg-signal px-5 py-3 text-sm font-bold uppercase tracking-[0.12em] text-white transition-colors hover:bg-white hover:text-ink;
+  }
+  .btn-ghost {
+    @apply inline-flex items-center gap-2 border border-white/60 px-5 py-3 text-sm font-bold uppercase tracking-[0.12em] text-white transition-colors hover:border-white hover:bg-white hover:text-ink;
+  }
+  .light .btn-ghost {
+    @apply border-ink/60 text-ink hover:bg-ink hover:text-white;
+  }
+  .chip {
+    @apply inline-flex items-center border border-rule px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.1em] text-mist transition-colors hover:border-white hover:text-white;
+  }
+  .chip[aria-pressed="true"] {
+    @apply border-signal bg-signal text-white;
+  }
+  .light .chip {
+    @apply border-mist text-steel hover:border-ink hover:text-ink;
+  }
+  .rule-t {
+    @apply border-t border-rule;
+  }
+  .light .rule-t {
+    @apply border-mist/60;
+  }
+  .card-zoom img {
+    @apply transition-transform duration-700 ease-out;
+  }
+  .card-zoom:hover img,
+  .card-zoom:focus-within img {
+    transform: scale(1.05);
+  }
+  .stat-num {
+    @apply font-display font-extrabold tabular-nums tracking-tight;
+  }
+  .light {
+    @apply bg-paper text-ink;
+    color-scheme: light;
+  }
+  .table-archive {
+    @apply w-full border-collapse text-left text-sm;
+  }
+  .table-archive th {
+    @apply border-b border-rule px-3 py-2 text-[0.68rem] font-bold uppercase tracking-[0.14em] text-mist;
+  }
+  .table-archive td {
+    @apply border-b border-rule/70 px-3 py-2.5 align-top;
+  }
+  .light .table-archive th {
+    @apply border-mist text-steel;
+  }
+  .light .table-archive td {
+    @apply border-mist/50;
+  }
+  .table-archive tbody tr:hover {
+    @apply bg-white/[0.03];
+  }
+  .light .table-archive tbody tr:hover {
+    @apply bg-ink/[0.03];
+  }
+  .skeleton {
+    @apply animate-pulse bg-white/10;
+  }
+  .light .skeleton {
+    @apply bg-ink/10;
+  }
+}
+
+/* Long-form article typography (light reading theme) */
+.prose-archive {
+  @apply max-w-prose text-[1.125rem] leading-[1.75] text-[#1d1f22];
+}
+.prose-archive h2 {
+  @apply mb-4 mt-12 text-3xl font-extrabold tracking-tight text-ink first:mt-0;
+}
+.prose-archive h3 {
+  @apply mb-3 mt-8 text-xl font-bold text-ink;
+}
+.prose-archive p {
+  @apply mb-5;
+}
+.prose-archive a {
+  @apply font-medium text-signal-deep underline underline-offset-[3px] hover:text-ink;
+}
+.prose-archive ul {
+  @apply mb-5 list-disc pl-6;
+}
+.prose-archive ol {
+  @apply mb-5 list-decimal pl-6;
+}
+.prose-archive em {
+  @apply text-steel;
+}
+.prose-archive blockquote {
+  @apply my-8 border-l-4 border-signal pl-5 text-xl italic text-ink;
+}
+.prose-dark {
+  @apply text-[1.0625rem] leading-[1.7] text-white/85;
+}
+.prose-dark h2 {
+  @apply mb-3 mt-8 text-2xl font-extrabold text-white first:mt-0;
+}
+.prose-dark p {
+  @apply mb-4;
+}
+.prose-dark a {
+  @apply text-signal-bright underline underline-offset-[3px];
+}
+.prose-dark ul {
+  @apply mb-4 list-disc pl-5;
+}
+.prose-dark table {
+  @apply mb-4 w-full text-sm;
+}
+.prose-dark th,
+.prose-dark td {
+  @apply border-b border-rule px-2 py-1.5 text-left;
+}
+
+/* Scroll reveal (progressive enhancement; see components/Reveal.tsx) */
+.reveal {
+  opacity: 0;
+  transform: translateY(18px);
+  transition: opacity 0.8s cubic-bezier(0.2, 0.7, 0.2, 1), transform 0.8s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+.reveal.is-visible {
+  opacity: 1;
+  transform: none;
+}
+
+.hero-gradient {
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.55) 0%, rgba(0, 0, 0, 0.15) 35%, rgba(0, 0, 0, 0.75) 75%, #000 100%);
+}
+.side-gradient {
+  background: linear-gradient(90deg, rgba(0, 0, 0, 0.85) 0%, rgba(0, 0, 0, 0.35) 55%, rgba(0, 0, 0, 0) 100%);
+}
+
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Checkered pattern used by placeholders and the logo */
+.checker {
+  background-image: conic-gradient(#fff 25%, transparent 0 50%, #fff 0 75%, transparent 0);
+  background-size: 16px 16px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+  .reveal {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Leaflet dark tweaks */
+.leaflet-container {
+  background: #0b0d10;
+  font-family: inherit;
+}
+.leaflet-popup-content-wrapper,
+.leaflet-popup-tip {
+  background: #000;
+  color: #fff;
+  border-radius: 0;
+}
+.leaflet-popup-content a {
+  color: #ff5a72;
+}
+
+/* Page transition */
+@keyframes page-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+main#main {
+  animation: page-in 0.35s ease-out both;
+}

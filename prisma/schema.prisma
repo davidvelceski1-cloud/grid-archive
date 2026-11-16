@@ -1,0 +1,475 @@
+// GRID ARCHIVE database schema.
+// Results data is keyed by Jolpica/Ergast ids (e.g. driver "senna", constructor "brabham",
+// circuit "monaco") so the ingestion is idempotent and the update job can upsert safely.
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  directUrl  = env("DIRECT_URL")
+  extensions = [vector]
+}
+
+enum TeamStatus {
+  ACTIVE
+  DEFUNCT
+  BECAME_ANOTHER_TEAM
+}
+
+enum CircuitType {
+  PERMANENT
+  STREET
+  ROAD
+}
+
+enum EntityType {
+  SEASON
+  RACE
+  DRIVER
+  TEAM
+  CIRCUIT
+  ERA
+  GLOSSARY
+  PAGE
+}
+
+enum ImageKind {
+  DRIVER
+  TEAM
+  CAR
+  CIRCUIT
+  TRACK_MAP
+}
+
+model Season {
+  year                  Int      @id
+  url                   String?
+  rounds                Int      @default(0)
+  headline              String?
+  headlineAuto          Boolean  @default(true) // false once edited in /admin
+  regulationChanges     String[] @default([])
+  championDriverId      String?
+  championConstructorId String?
+  eraSlug               String?
+  updatedAt             DateTime @updatedAt
+
+  championDriver       Driver?               @relation("SeasonChampionDriver", fields: [championDriverId], references: [id])
+  championConstructor  Team?                 @relation("SeasonChampionConstructor", fields: [championConstructorId], references: [id])
+  era                  Era?                  @relation(fields: [eraSlug], references: [slug])
+  races                Race[]
+  driverStandings      DriverStanding[]
+  constructorStandings ConstructorStanding[]
+  chassis              Chassis[]
+  teamSeasons          TeamSeason[]
+}
+
+model Race {
+  id                  String   @id // "<year>-<round>"
+  year                Int
+  round               Int
+  name                String
+  slug                String // "monaco-grand-prix", unique within a season
+  date                DateTime
+  time                String?
+  url                 String?
+  circuitId           String
+  winnerDriverId      String?
+  winnerConstructorId String?
+  poleDriverId        String?
+  fastestLapDriverId  String?
+  hasSprint           Boolean  @default(false)
+
+  season     Season       @relation(fields: [year], references: [year], onDelete: Cascade)
+  circuit    Circuit      @relation(fields: [circuitId], references: [id])
+  winner     Driver?      @relation("RaceWinner", fields: [winnerDriverId], references: [id])
+  winnerTeam Team?        @relation("RaceWinnerTeam", fields: [winnerConstructorId], references: [id])
+  pole       Driver?      @relation("RacePole", fields: [poleDriverId], references: [id])
+  fastestLap Driver?      @relation("RaceFastestLap", fields: [fastestLapDriverId], references: [id])
+  results    Result[]
+  qualifying Qualifying[]
+
+  @@unique([year, round])
+  @@unique([year, slug])
+  @@index([circuitId])
+  @@index([date])
+  @@index([winnerDriverId])
+  @@index([year])
+}
+
+model Result {
+  id             Int     @id @default(autoincrement())
+  raceId         String
+  driverId       String
+  constructorId  String
+  engine         String? // e.g. "Climax" for Jolpica ids like "cooper-climax"
+  isSprint       Boolean @default(false)
+  number         String?
+  grid           Int?
+  position       Int?
+  positionText   String
+  positionOrder  Int
+  points         Float   @default(0)
+  laps           Int     @default(0)
+  status         String
+  timeText       String?
+  timeMillis     BigInt?
+  fastestLapRank Int?
+  fastestLapTime String?
+
+  race   Race   @relation(fields: [raceId], references: [id], onDelete: Cascade)
+  driver Driver @relation(fields: [driverId], references: [id])
+  team   Team   @relation(fields: [constructorId], references: [id])
+
+  @@unique([raceId, driverId, isSprint, positionOrder])
+  @@index([raceId])
+  @@index([driverId])
+  @@index([constructorId])
+}
+
+model Qualifying {
+  id            Int     @id @default(autoincrement())
+  raceId        String
+  driverId      String
+  constructorId String
+  number        String?
+  position      Int
+  q1            String?
+  q2            String?
+  q3            String?
+
+  race   Race   @relation(fields: [raceId], references: [id], onDelete: Cascade)
+  driver Driver @relation(fields: [driverId], references: [id])
+  team   Team   @relation(fields: [constructorId], references: [id])
+
+  @@unique([raceId, driverId])
+}
+
+model DriverStanding {
+  id             Int      @id @default(autoincrement())
+  year           Int
+  driverId       String
+  position       Int?
+  positionText   String
+  points         Float
+  wins           Int
+  constructorIds String[] @default([])
+
+  season Season @relation(fields: [year], references: [year], onDelete: Cascade)
+  driver Driver @relation(fields: [driverId], references: [id])
+
+  @@unique([year, driverId])
+}
+
+model ConstructorStanding {
+  id            Int    @id @default(autoincrement())
+  year          Int
+  constructorId String
+  position      Int?
+  positionText  String
+  points        Float
+  wins          Int
+
+  season Season @relation(fields: [year], references: [year], onDelete: Cascade)
+  team   Team   @relation(fields: [constructorId], references: [id])
+
+  @@unique([year, constructorId])
+}
+
+model Driver {
+  id              String    @id // Jolpica driverId
+  slug            String    @unique
+  code            String?
+  permanentNumber String?
+  givenName       String
+  familyName      String
+  fullName        String
+  searchName      String // lower-case, accent-free, for instant search
+  dateOfBirth     DateTime?
+  dateOfDeath     DateTime?
+  nationality     String?
+  url             String?
+  wikidataId      String?
+  imageId         Int?
+  // Denormalised career stats (recomputed by ingestion)
+  starts          Int       @default(0)
+  wins            Int       @default(0)
+  poles           Int       @default(0)
+  podiums         Int       @default(0)
+  fastestLaps     Int       @default(0)
+  points          Float     @default(0)
+  titles          Int       @default(0)
+  firstYear       Int?
+  lastYear        Int?
+  numbers         String[]  @default([])
+
+  image           Image?           @relation("DriverImage", fields: [imageId], references: [id])
+  results         Result[]
+  qualifying      Qualifying[]
+  standings       DriverStanding[]
+  championships   Season[]         @relation("SeasonChampionDriver")
+  raceWins        Race[]           @relation("RaceWinner")
+  racePoles       Race[]           @relation("RacePole")
+  raceFastestLaps Race[]           @relation("RaceFastestLap")
+
+  @@index([searchName])
+  @@index([lastYear])
+}
+
+// Named "Team" in code (a model called "Constructor" would shadow JavaScript's
+// Object.prototype.constructor in the generated types); the table stays "Constructor".
+model Team {
+  id                String     @id // Jolpica constructorId
+  slug              String     @unique
+  name              String
+  searchName        String
+  nationality       String?
+  url               String?
+  wikidataId        String?
+  color             String     @default("#5A5F66")
+  founded           Int?
+  base              String?
+  founder           String?
+  status            TeamStatus @default(DEFUNCT)
+  whyDisappeared    String?
+  imageId           Int?
+  entries           Int        @default(0)
+  wins              Int        @default(0)
+  poles             Int        @default(0)
+  podiums           Int        @default(0)
+  driverTitles      Int        @default(0)
+  constructorTitles Int        @default(0)
+  points            Float      @default(0)
+  firstYear         Int?
+  lastYear          Int?
+
+  image         Image?                @relation("TeamImage", fields: [imageId], references: [id])
+  results       Result[]
+  qualifying    Qualifying[]
+  standings     ConstructorStanding[]
+  championships Season[]              @relation("SeasonChampionConstructor")
+  raceWins      Race[]                @relation("RaceWinnerTeam")
+  chassis       Chassis[]
+  teamSeasons   TeamSeason[]
+  predecessorOf ConstructorLineage[]  @relation("LineagePredecessor")
+  successorOf   ConstructorLineage[]  @relation("LineageSuccessor")
+
+  @@index([searchName])
+  @@map("Constructor")
+}
+
+model ConstructorLineage {
+  id            Int     @id @default(autoincrement())
+  predecessorId String
+  successorId   String
+  year          Int // first season under the successor identity
+  kind          String // "renamed", "bought", "rebranded", "merged"
+  note          String?
+
+  predecessor Team @relation("LineagePredecessor", fields: [predecessorId], references: [id], onDelete: Cascade)
+  successor   Team @relation("LineageSuccessor", fields: [successorId], references: [id], onDelete: Cascade)
+
+  @@unique([predecessorId, successorId])
+}
+
+model Circuit {
+  id         String      @id // Jolpica circuitId
+  slug       String      @unique
+  name       String
+  searchName String
+  locality   String?
+  country    String?
+  lat        Float?
+  lng        Float?
+  url        String?
+  wikidataId String?
+  type       CircuitType @default(PERMANENT)
+  lengthKm   Float?
+  turns      Int?
+  lapRecord  String?
+  firstYear  Int?
+  lastYear   Int?
+  raceCount  Int         @default(0)
+  isActive   Boolean     @default(false)
+  imageId    Int?
+  trackMapId Int?
+
+  image    Image?          @relation("CircuitImage", fields: [imageId], references: [id])
+  trackMap Image?          @relation("CircuitTrackMap", fields: [trackMapId], references: [id])
+  races    Race[]
+  layouts  CircuitLayout[]
+
+  @@index([searchName])
+}
+
+model CircuitLayout {
+  id        Int     @id @default(autoincrement())
+  circuitId String
+  name      String
+  fromYear  Int
+  toYear    Int?
+  lengthKm  Float?
+  turns     Int?
+  notes     String?
+
+  circuit Circuit @relation(fields: [circuitId], references: [id], onDelete: Cascade)
+
+  @@unique([circuitId, fromYear])
+}
+
+model Engine {
+  id            String    @id // slug, e.g. "ford-cosworth-dfv"
+  manufacturer  String
+  name          String
+  configuration String?
+  chassis       Chassis[]
+}
+
+model Chassis {
+  id            String  @id // slug, e.g. "mclaren-mp4-4"
+  name          String
+  constructorId String
+  year          Int
+  engineId      String?
+  designer      String?
+  notes         String?
+  imageId       Int?
+
+  team   Team    @relation(fields: [constructorId], references: [id], onDelete: Cascade)
+  season Season  @relation(fields: [year], references: [year])
+  engine Engine? @relation(fields: [engineId], references: [id])
+  image  Image?  @relation("ChassisImage", fields: [imageId], references: [id])
+
+  @@index([constructorId])
+}
+
+/// Which chassis and engines a team used in a season (from each season's Wikipedia
+/// entries table; see scripts/import-chassis.ts). Complements the curated Chassis
+/// register, which holds photos and details for notable cars.
+model TeamSeason {
+  teamId  String
+  year    Int
+  chassis String[] @default([])
+  engines String[] @default([])
+  source  String?
+
+  team   Team   @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  season Season @relation(fields: [year], references: [year], onDelete: Cascade)
+
+  @@id([teamId, year])
+  @@index([year])
+}
+
+model Era {
+  slug      String   @id
+  name      String
+  startYear Int
+  endYear   Int?
+  tagline   String
+  summary   String
+  body      String
+  order     Int
+  seasons   Season[]
+}
+
+model Image {
+  id          Int       @id @default(autoincrement())
+  kind        ImageKind
+  entityId    String
+  path        String // "/images/drivers/ayrton-senna.webp" (largest size)
+  srcset      Json? // [{ "w": 400, "path": "..." }, ...]
+  width       Int?
+  height      Int?
+  alt         String
+  author      String
+  license     String
+  licenseUrl  String?
+  sourceUrl   String // Commons file page
+  commonsFile String
+  createdAt   DateTime  @default(now())
+
+  drivers     Driver[]  @relation("DriverImage")
+  teams       Team[]    @relation("TeamImage")
+  circuits    Circuit[] @relation("CircuitImage")
+  circuitMaps Circuit[] @relation("CircuitTrackMap")
+  chassis     Chassis[] @relation("ChassisImage")
+
+  @@unique([kind, entityId])
+}
+
+model Article {
+  id          Int        @id @default(autoincrement())
+  entityType  EntityType
+  entityId    String
+  title       String
+  body        String // Markdown; "## " headings split it into chapters
+  aiGenerated Boolean    @default(false)
+  model       String?
+  sources     Json       @default("[]") // [{ "title": "...", "url": "...", "license": "CC BY-SA 4.0" }]
+  lastEdited  DateTime   @default(now())
+  editedBy    String?
+
+  @@unique([entityType, entityId])
+}
+
+// Wikipedia lead-section extracts (CC BY-SA), used as grounding for articles and RAG.
+model WikiExtract {
+  id         Int        @id @default(autoincrement())
+  entityType EntityType
+  entityId   String
+  title      String
+  url        String
+  extract    String
+  fetchedAt  DateTime   @default(now())
+
+  @@unique([entityType, entityId])
+}
+
+model GlossaryTerm {
+  slug     String @id
+  term     String
+  category String
+  short    String
+  long     String
+  eli5     String
+}
+
+// Chunked archive content for retrieval-augmented generation.
+// `embedding` is filled by scripts/build-embeddings.ts via raw SQL (pgvector);
+// rows without an embedding still participate through Postgres full-text search.
+// The GIN full-text index and the HNSW vector index are created in the
+// 20261108000100_search_indexes migration (Prisma can't express them here).
+model Embedding {
+  id         Int                          @id @default(autoincrement())
+  entityType EntityType
+  entityId   String
+  url        String
+  title      String
+  chunkIndex Int
+  content    String
+  embedding  Unsupported("vector(1024)")?
+  createdAt  DateTime                     @default(now())
+
+  @@unique([entityType, entityId, chunkIndex])
+}
+
+model DailyFeature {
+  key         String   @id // "otd-11-08"
+  title       String
+  body        String
+  links       Json     @default("[]")
+  aiGenerated Boolean  @default(false)
+  createdAt   DateTime @default(now())
+}
+
+model IngestRun {
+  id         Int       @id @default(autoincrement())
+  job        String
+  startedAt  DateTime  @default(now())
+  finishedAt DateTime?
+  ok         Boolean   @default(false)
+  message    String?
+}
